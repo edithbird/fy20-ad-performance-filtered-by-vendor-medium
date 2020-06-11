@@ -1,0 +1,477 @@
+---
+title: "FY20_Ad_Summary"
+author: "Office of Marketing and Brand Management"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
+```
+
+
+```{r}
+library(tidyverse)
+library(knitr)
+library(reactable)
+library(hms)
+```
+
+```{r}
+
+FM_Orig <- read.csv("file:///Z:/DAA/Marketing/MKT_output.csv", header = T, stringsAsFactors = F)
+```
+
+```{r data 1}
+
+FM <- FM_Orig %>% filter(Master_Adname_Type == "NC" )
+FM <- FM %>% 
+  mutate(Code_Audience = ifelse(Master_Adname == "FA20_BR_FB_VID__TL_UG_D_1", "TL", Code_Audience), 
+         Code_Product = ifelse(Master_Adname == "FA20_BR_FB_VID__TL_UG_D_1", "UG", Code_Product), 
+         Code_RecruitingPeriod = ifelse(Code_RecruitingPeriod == " FA20", "FA20", Code_RecruitingPeriod)) %>%
+  select(1:8, 13, 15:19, 21:24, 26:29, 31:39, 41) %>% 
+  select(Master_Date, Master_Landing_Page,everything())
+#FM <- FM %>% mutate_at(9:30, ~replace(., is.na(.), 0)) %>% mutate(Master_Date = as.Date(Master_Date, format = "%m/%d/%Y")) %>% arrange(Master_Date)
+
+FM <- FM %>% 
+  mutate_at(10:31, ~replace(., is.na(.), 0)) %>% 
+  mutate(Master_Date = as.Date(Master_Date, format = "%Y-%m-%d"), 
+         Master_Results = as.numeric(Master_Results), 
+         Master_Engagements = as.numeric(Master_Engagements)
+         #,
+         #Code_Product = ifelse(Code_Product == "TL", "TR", Code_Product)
+         ) %>% 
+  arrange(Master_Date) %>% 
+  filter(Master_Date > "2019-08-15")
+
+
+
+
+FM <- FM %>% mutate(Master_Landing_Page_1 =
+                      ifelse(grepl("advance", Master_Landing_Page), "/advance", 
+                             ifelse(grepl("here", Master_Landing_Page), "/here",
+                                    ifelse(grepl("excel", Master_Landing_Page), "/excel",
+                                           ifelse(grepl("regional", Master_Landing_Page), "/NEBBHE", 
+                                                  ifelse(grepl("cyber", Master_Landing_Page), "/cyber-security", 
+                                                         ifelse(grepl("muskie", Master_Landing_Page), "/muskie",
+                                                                ifelse(grepl("", Master_Landing_Page), "/blank",
+               ifelse(grepl("visit", Master_Landing_Page), "/visit","/other"
+                    ))))))))) %>% select(Master_Date, Master_Landing_Page, Master_Landing_Page_1, everything())
+
+```
+
+```{r data 3}
+
+colorP <- c("#F6A704", "#0E1033","#4E7B14","#A92007","#D47E0A")
+ FMVM <- FM %>%
+   mutate(Product_Audience = paste0(Code_Product, "_", Code_Audience)) %>%
+   group_by(Code_RecruitingPeriod, Code_Audience,Code_Product, Code_Vendor, Code_Medium,Master_Date) %>%
+   summarise(
+     Cost = round(sum(Master_Cost), 2),
+     Clicks = sum(Master_Clicks),
+     Impressions = round(sum(Master_Impressions),0),
+     #CTR = paste0(round(Clicks/Impressions * 100, 2), "%"),
+     Bounces = sum(Master_Bounces),
+     Sessions = sum(Master_Sessions),
+     UPV = sum(Master_Unique_Pageviews),
+     Views = sum(Master_Views),
+     Completions = sum(Master_Completions),
+     Master_Time_On_Page = sum(Master_Time_On_Page), 
+     Master_Pageviews = sum(Master_Pageviews), 
+     Master_Exits = sum(Master_Exits), 
+     #BounceRate = paste0(round(Bounces/Sessions * 100, 2), "%"),
+     Step1 = sum(Master_Time_On_Page)/(sum(Master_Pageviews)- sum(Master_Exits)),
+     Av_TOP = round_hms(as_hms(Step1), 5),
+     ClickRatePct = round(Clicks/Impressions * 100, 2),
+     BounceRatePct = round(Bounces/Sessions * 100, 2),
+     ViewRate = round(Views/Impressions * 100, 2),
+     VTR = round(Completions/Impressions * 100, 2),
+     ClickableCompletions = sum(Master_Clickable_Completions),
+     ClickableCompRate = round(Clicks/ClickableCompletions * 100, 2), 
+     Swipes = sum(Master_Swipes), 
+     SwipeUpRatePct = round(Swipes/Impressions * 100, 2),
+     Opens = sum(Master_Clicks_To_Site),
+     CTOR = round(Opens/Clicks * 100, 2), 
+     Sends = sum(Master_Sends), 
+     LIOpens = sum(Master_Opens),
+     LIClicks = sum(Master_Clicks_Sponsored_InMail),
+     OpenRate = round(LIOpens/Sends * 100, 2), 
+     Engagements = sum(Master_Engagements),
+     Results = sum(Master_Results), 
+     EngagementRate = round(Engagements/Impressions * 100, 2),
+     EngRate = round((sum(LIOpens)+sum(Engagements))/sum(Sends)*100, 2), 
+     Avg_RR = round(sum(Results)/sum(Impressions) * 100, 2),
+     LICTOR = round(sum(LIClicks)/sum(LIOpens) * 100, 2)) %>%
+   select(Master_Date, Impressions, Clicks, Bounces, Sessions, Swipes, ClickRatePct, SwipeUpRatePct, UPV, BounceRatePct, Av_TOP, ClickableCompRate, VTR, CTOR,OpenRate, Sends, ViewRate, ClickableCompletions, Completions, Opens, LIOpens, LIClicks, Engagements, LICTOR, EngRate, EngagementRate, Master_Exits, Master_Pageviews, Master_Time_On_Page, Cost, Avg_RR, Results, Views, Completions)
+ 
+desiredRecruiting <- c("FA20", "FA21", "SU20")
+
+```
+
+## Vendors and Mediums {.tabset .tabset-fade .tabset-pills}
+
+For details on each program and audience, click the arrows.
+
+### Facebook Display
+
+```{r}
+data1 <- FMVM %>% 
+  filter(Code_Product != "UNI" & Code_Medium == "DISP" & Code_Vendor == "FB" & Code_RecruitingPeriod %in% desiredRecruiting & Impressions > 0 ) %>% 
+  group_by(Code_RecruitingPeriod, Code_Product, Code_Audience,Master_Date) %>% 
+  summarise(
+    Impressions = sum(Impressions),
+    Cost = sum(Cost),
+    #Results = sum(Results),
+    ClickRatePct = Clicks/Impressions,
+    UPV = sum(UPV),
+    BounceRatePct = Bounces/Sessions,
+    # OpenRate = LIOpens/Sends, 
+    # EngagementRate = Engagements/Impressions,
+    # BounceRatePct = Bounces/Sessions, 
+    # ResultsRate = Results/Impressions, 
+    # ViewRate = round(Views/Impressions * 100, 2),
+    # VTR = round(Completions/Impressions *100, 2) 
+    )
+ reactable(data1, searchable = TRUE, filterable = TRUE, groupBy = c("Code_RecruitingPeriod","Code_Product", "Code_Audience"), columns = list(
+  
+  Cost = colDef(aggregate = "sum", format = colFormat(prefix = "$", separators = TRUE, digits = 2),filterable = FALSE),
+  Impressions = colDef(aggregate = "sum", format = colFormat(separators = TRUE),filterable = FALSE),
+  UPV = colDef(aggregate = "sum",filterable = FALSE),
+  ClickRatePct = colDef(aggregate = "mean", format = colFormat(percent = TRUE, digits = 1),filterable = FALSE),
+  BounceRatePct = colDef(aggregate = "mean",format = colFormat(percent = TRUE, digits = 0),filterable = FALSE)))
+```
+
+### Instagram Display
+
+```{r}
+data1 <- FMVM %>% 
+  filter(Code_Product != "UNI" & Code_Medium == "DISP" & Code_Vendor == "IG" & Code_RecruitingPeriod %in% desiredRecruiting & Impressions > 0 ) %>% 
+  group_by(Code_RecruitingPeriod, Code_Product, Code_Audience,Master_Date) %>% 
+  summarise(
+    Impressions = sum(Impressions),
+    Cost = sum(Cost),
+    #Results = sum(Results),
+    ClickRatePct = Clicks/Impressions,
+    UPV = sum(UPV),
+    BounceRatePct = Bounces/Sessions,
+    # OpenRate = LIOpens/Sends, 
+    # EngagementRate = Engagements/Impressions,
+    # BounceRatePct = Bounces/Sessions, 
+    # ResultsRate = Results/Impressions, 
+    # ViewRate = round(Views/Impressions * 100, 2),
+    # VTR = round(Completions/Impressions *100, 2) 
+    )
+ reactable(data1, searchable = TRUE, filterable = TRUE, groupBy = c("Code_RecruitingPeriod","Code_Product", "Code_Audience"), columns = list(
+  
+  Cost = colDef(aggregate = "sum", format = colFormat(prefix = "$", separators = TRUE, digits = 2),filterable = FALSE),
+  Impressions = colDef(aggregate = "sum", format = colFormat(separators = TRUE),filterable = FALSE),
+  UPV = colDef(aggregate = "sum",filterable = FALSE),
+  ClickRatePct = colDef(aggregate = "mean", format = colFormat(percent = TRUE, digits = 1),filterable = FALSE),
+  BounceRatePct = colDef(aggregate = "mean",format = colFormat(percent = TRUE, digits = 0),filterable = FALSE)))
+```
+
+### Programmatic Display
+
+```{r}
+data1 <- FMVM %>% 
+  filter(Code_Product != "UNI" & Code_Medium == "DISP" & Code_Vendor == "DBM" & Code_RecruitingPeriod %in% desiredRecruiting & Impressions > 0 ) %>% 
+  group_by(Code_RecruitingPeriod, Code_Product, Code_Audience,Master_Date) %>% 
+  summarise(
+    Impressions = sum(Impressions),
+    Cost = sum(Cost),
+    #Results = sum(Results),
+    ClickRatePct = Clicks/Impressions,
+    UPV = sum(UPV),
+    BounceRatePct = Bounces/Sessions,
+    # OpenRate = LIOpens/Sends, 
+    # EngagementRate = Engagements/Impressions,
+    # BounceRatePct = Bounces/Sessions, 
+    # ResultsRate = Results/Impressions, 
+    # ViewRate = round(Views/Impressions * 100, 2),
+    # VTR = round(Completions/Impressions *100, 2) 
+    )
+ reactable(data1, searchable = TRUE, filterable = TRUE, groupBy = c("Code_RecruitingPeriod","Code_Product", "Code_Audience"), columns = list(
+  
+  Cost = colDef(aggregate = "sum", format = colFormat(prefix = "$", separators = TRUE, digits = 2),filterable = FALSE),
+  Impressions = colDef(aggregate = "sum", format = colFormat(separators = TRUE),filterable = FALSE),
+  UPV = colDef(aggregate = "sum",filterable = FALSE),
+  ClickRatePct = colDef(aggregate = "mean", format = colFormat(percent = TRUE, digits = 1),filterable = FALSE),
+  BounceRatePct = colDef(aggregate = "mean",format = colFormat(percent = TRUE, digits = 0),filterable = FALSE)))
+```
+
+### Pinterest Display
+
+```{r}
+data1 <- FMVM %>% 
+  filter(Code_Product != "UNI" & Code_Medium == "DISP" & Code_Vendor == "PIN" & Code_RecruitingPeriod %in% desiredRecruiting & Impressions > 0 ) %>% 
+  group_by(Code_RecruitingPeriod, Code_Product, Code_Audience,Master_Date) %>% 
+  summarise(
+    Impressions = sum(Impressions),
+    Cost = sum(Cost),
+    #Results = sum(Results),
+    ClickRatePct = Clicks/Impressions,
+    UPV = sum(UPV),
+    BounceRatePct = Bounces/Sessions,
+    # OpenRate = LIOpens/Sends, 
+    # EngagementRate = Engagements/Impressions,
+    # BounceRatePct = Bounces/Sessions, 
+    # ResultsRate = Results/Impressions, 
+    # ViewRate = round(Views/Impressions * 100, 2),
+    # VTR = round(Completions/Impressions *100, 2) 
+    )
+ reactable(data1, searchable = TRUE, filterable = TRUE, groupBy = c("Code_RecruitingPeriod","Code_Product", "Code_Audience"), columns = list(
+  
+  Cost = colDef(aggregate = "sum", format = colFormat(prefix = "$", separators = TRUE, digits = 2),filterable = FALSE),
+  Impressions = colDef(aggregate = "sum", format = colFormat(separators = TRUE),filterable = FALSE),
+  UPV = colDef(aggregate = "sum",filterable = FALSE),
+  ClickRatePct = colDef(aggregate = "mean", format = colFormat(percent = TRUE, digits = 1),filterable = FALSE),
+  BounceRatePct = colDef(aggregate = "mean",format = colFormat(percent = TRUE, digits = 0),filterable = FALSE)))
+```
+
+### Snapchat Display
+
+```{r}
+data1 <- FMVM %>% 
+  filter(Code_Product != "UNI" &  Code_Vendor == "SC" & Code_RecruitingPeriod %in% desiredRecruiting & Impressions > 0 ) %>% 
+  group_by(Code_RecruitingPeriod, Code_Product, Code_Audience,Master_Date) %>% 
+  summarise(
+    Impressions = sum(Impressions),
+    Cost = sum(Cost),
+    #Results = sum(Results),
+    ClickRatePct = Clicks/Impressions,
+    UPV = sum(UPV),
+    BounceRatePct = Bounces/Sessions,
+    #Sends = sum(Sends),
+    #OpenRate = LIOpens/Sends, 
+    # EngagementRate = Engagements/Impressions,
+    # BounceRatePct = Bounces/Sessions, 
+    # ResultsRate = Results/Impressions, 
+    # ViewRate = round(Views/Impressions * 100, 2),
+    # VTR = round(Completions/Impressions *100, 2) 
+    )
+ reactable(data1, searchable = TRUE, filterable = TRUE, groupBy = c("Code_RecruitingPeriod","Code_Product", "Code_Audience"), columns = list(
+  
+  Cost = colDef(aggregate = "sum", format = colFormat(prefix = "$", separators = TRUE, digits = 2),filterable = FALSE),
+  Impressions = colDef(aggregate = "sum", format = colFormat(separators = TRUE),filterable = FALSE),
+  UPV = colDef(aggregate = "sum",filterable = FALSE),
+  ClickRatePct = colDef(aggregate = "mean", format = colFormat(percent = TRUE, digits = 1),filterable = FALSE),
+  BounceRatePct = colDef(aggregate = "mean",format = colFormat(percent = TRUE, digits = 0),filterable = FALSE)))
+```
+
+### LinkedIn InBox
+
+```{r}
+data1 <- FMVM %>% 
+  filter(Code_Product != "UNI" &  Code_Vendor == "LI" & Code_Medium == "TEXT" & Code_RecruitingPeriod %in% desiredRecruiting & Sends > 0 ) %>% 
+  group_by(Code_RecruitingPeriod, Code_Product, Code_Audience,Master_Date) %>% 
+  summarise(
+    Sends = sum(Sends),
+    Cost = sum(Cost),
+    #Results = sum(Results),
+    #ClickRatePct = Clicks/Impressions,
+    UPV = sum(UPV),
+    BounceRatePct = Bounces/Sessions,
+    OpenRate = LIOpens/Sends, 
+    LICTOR = LIClicks/LIOpens,
+    # EngagementRate = Engagements/Impressions,
+    # BounceRatePct = Bounces/Sessions, 
+    # ResultsRate = Results/Impressions, 
+    # ViewRate = round(Views/Impressions * 100, 2),
+    # VTR = round(Completions/Impressions *100, 2) 
+    )
+ reactable(data1, searchable = TRUE, filterable = TRUE, groupBy = c("Code_RecruitingPeriod","Code_Product", "Code_Audience"), columns = list(
+  
+  Cost = colDef(aggregate = "sum", format = colFormat(prefix = "$", separators = TRUE, digits = 2),filterable = FALSE),
+  Sends = colDef(aggregate = "sum", format = colFormat(separators = TRUE),filterable = FALSE),
+  UPV = colDef(aggregate = "sum",filterable = FALSE),
+  OpenRate = colDef(aggregate = "mean", format = colFormat(percent = TRUE, digits = 1),filterable = FALSE),
+  BounceRatePct = colDef(aggregate = "mean",format = colFormat(percent = TRUE, digits = 0),filterable = FALSE),
+  LICTOR = colDef(aggregate = "mean",format = colFormat(percent = TRUE, digits = 1),filterable = FALSE)))
+```
+
+### LinkedIn Display
+
+```{r}
+data1 <- FMVM %>% 
+  filter(Code_Product != "UNI" &  Code_Vendor == "LI" & Code_Medium == "DISP" & Code_RecruitingPeriod %in% desiredRecruiting & Impressions > 0 ) %>% 
+  group_by(Code_RecruitingPeriod, Code_Product, Code_Audience,Master_Date) %>% 
+  summarise(
+    Impressions = sum(Impressions),
+    Cost = sum(Cost),
+    #Results = sum(Results),
+    ClickRatePct = Clicks/Impressions,
+    UPV = sum(UPV),
+    BounceRatePct = Bounces/Sessions,
+    # OpenRate = LIOpens/Sends, 
+    # EngagementRate = Engagements/Impressions,
+    # BounceRatePct = Bounces/Sessions, 
+    # ResultsRate = Results/Impressions, 
+    # ViewRate = round(Views/Impressions * 100, 2),
+    # VTR = round(Completions/Impressions *100, 2) 
+    )
+ reactable(data1, searchable = TRUE, filterable = TRUE, groupBy = c("Code_RecruitingPeriod","Code_Product", "Code_Audience"), columns = list(
+  
+  Cost = colDef(aggregate = "sum", format = colFormat(prefix = "$", separators = TRUE, digits = 2),filterable = FALSE),
+  Impressions = colDef(aggregate = "sum", format = colFormat(separators = TRUE),filterable = FALSE),
+  UPV = colDef(aggregate = "sum",filterable = FALSE),
+  ClickRatePct = colDef(aggregate = "mean", format = colFormat(percent = TRUE, digits = 1),filterable = FALSE),
+  BounceRatePct = colDef(aggregate = "mean",format = colFormat(percent = TRUE, digits = 0),filterable = FALSE)))
+```
+
+### Gmail InBox
+
+```{r}
+data1 <- FMVM %>% 
+  filter(Code_Product != "UNI" &  Code_Vendor == "GM" & Code_RecruitingPeriod %in% desiredRecruiting & Impressions > 0 ) %>% 
+  group_by(Code_RecruitingPeriod, Code_Product, Code_Audience,Master_Date) %>% 
+  summarise(
+    Impressions = sum(Impressions),
+    Cost = sum(Cost),
+    #Results = sum(Results),
+    ClickRatePct = Clicks/Impressions,
+    UPV = sum(UPV),
+    BounceRatePct = Bounces/Sessions,
+    OpenRate = Opens/Clicks, 
+    # EngagementRate = Engagements/Impressions,
+    # BounceRatePct = Bounces/Sessions, 
+    # ResultsRate = Results/Impressions, 
+    # ViewRate = round(Views/Impressions * 100, 2),
+    # VTR = round(Completions/Impressions *100, 2) 
+    )
+ reactable(data1, searchable = TRUE, filterable = TRUE, groupBy = c("Code_RecruitingPeriod","Code_Product", "Code_Audience"), columns = list(
+  
+  Cost = colDef(aggregate = "sum", format = colFormat(prefix = "$", separators = TRUE, digits = 2),filterable = FALSE),
+  Impressions = colDef(aggregate = "sum", format = colFormat(separators = TRUE),filterable = FALSE),
+  UPV = colDef(aggregate = "sum",filterable = FALSE),
+  ClickRatePct = colDef(aggregate = "mean", format = colFormat(percent = TRUE, digits = 1),filterable = FALSE),
+  BounceRatePct = colDef(aggregate = "mean",format = colFormat(percent = TRUE, digits = 0),filterable = FALSE), 
+  OpenRate = colDef(aggregate = "mean",format = colFormat(percent = TRUE, digits = 1),filterable = FALSE)))
+```
+
+### Twitter Display
+
+```{r}
+data1 <- FMVM %>% 
+  filter(Code_Product != "UNI" &  Code_Vendor == "TW" & Code_RecruitingPeriod %in% desiredRecruiting & Impressions > 0 ) %>% 
+  group_by(Code_RecruitingPeriod, Code_Product, Code_Audience,Master_Date) %>% 
+  summarise(
+    Impressions = sum(Impressions),
+    Cost = sum(Cost),
+    #Results = sum(Results),
+    EngageRate = Engagements/Impressions,
+    UPV = sum(UPV),
+    BounceRatePct = Bounces/Sessions,
+    Avg_RR = sum(Results)/sum(Impressions), 
+    # EngagementRate = Engagements/Impressions,
+    # BounceRatePct = Bounces/Sessions, 
+    # ResultsRate = Results/Impressions, 
+    # ViewRate = round(Views/Impressions * 100, 2),
+    # VTR = round(Completions/Impressions *100, 2) 
+    )
+ reactable(data1, searchable = TRUE, filterable = TRUE, groupBy = c("Code_RecruitingPeriod","Code_Product", "Code_Audience"), columns = list(
+  
+  Cost = colDef(aggregate = "sum", format = colFormat(prefix = "$", separators = TRUE, digits = 2),filterable = FALSE),
+  Impressions = colDef(aggregate = "sum", format = colFormat(separators = TRUE),filterable = FALSE),
+  UPV = colDef(aggregate = "sum",filterable = FALSE),
+  # ClickRatePct = colDef(aggregate = "mean", format = colFormat(percent = TRUE, digits = 1),filterable = FALSE),
+  BounceRatePct = colDef(aggregate = "mean",format = colFormat(percent = TRUE, digits = 0),filterable = FALSE), 
+  EngageRate = colDef(aggregate = "mean",format = colFormat(percent = TRUE, digits = 1),filterable = FALSE), 
+  Avg_RR = colDef(aggregate = "mean",format = colFormat(percent = TRUE, digits = 1),filterable = FALSE)))
+```
+
+### Facebook Video
+
+```{r}
+data1 <- FMVM %>% 
+  filter(Code_Medium == "VID" & Code_Vendor == "FB" & Code_RecruitingPeriod %in% desiredRecruiting & Views > 0 ) %>% 
+  group_by(Code_RecruitingPeriod, Code_Product, Code_Audience,Master_Date) %>% 
+  summarise(
+    Impressions = sum(Impressions),
+    Cost = sum(Cost),
+    #Results = sum(Results),
+    #VR = Views/Impressions,
+    UPV = sum(UPV),
+    BounceRatePct = Bounces/Sessions,
+    # OpenRate = LIOpens/Sends, 
+    # EngagementRate = Engagements/Impressions,
+    # BounceRatePct = Bounces/Sessions, 
+    # ResultsRate = Results/Impressions, 
+    ViewRate = round(Views/Impressions),
+    VTR = round(Completions/Views) 
+    )
+ reactable(data1, searchable = TRUE, filterable = TRUE, groupBy = c("Code_RecruitingPeriod","Code_Product", "Code_Audience"), columns = list(
+  
+  Cost = colDef(aggregate = "sum", format = colFormat(prefix = "$", separators = TRUE, digits = 2),filterable = FALSE),
+  Impressions = colDef(aggregate = "sum", format = colFormat(separators = TRUE),filterable = FALSE),
+  UPV = colDef(aggregate = "sum",filterable = FALSE),
+  ViewRate = colDef(aggregate = "mean", format = colFormat(percent = TRUE, digits = 1),filterable = FALSE),
+  VTR = colDef(aggregate = "mean", format = colFormat(percent = TRUE, digits = 1),filterable = FALSE),
+  BounceRatePct = colDef(aggregate = "mean",format = colFormat(percent = TRUE, digits = 0),filterable = FALSE)))
+```
+
+### Instagram Video
+
+```{r}
+data1 <- FMVM %>% 
+  filter(Code_Medium == "VID" & Code_Vendor == "IG" & Code_RecruitingPeriod %in% desiredRecruiting & Views > 0) %>% 
+  group_by(Code_RecruitingPeriod, Code_Product, Code_Audience,Master_Date) %>% 
+  summarise(
+    Impressions = sum(Impressions),
+    Cost = sum(Cost),
+    #Results = sum(Results),
+    #VR = Views/Impressions,
+    UPV = sum(UPV),
+    BounceRatePct = Bounces/Sessions,
+    # OpenRate = LIOpens/Sends, 
+    # EngagementRate = Engagements/Impressions,
+    # BounceRatePct = Bounces/Sessions, 
+    # ResultsRate = Results/Impressions, 
+    ViewRate = round(Views/Impressions),
+    VTR = round(Completions/Views) 
+    )
+ reactable(data1, searchable = TRUE, filterable = TRUE, groupBy = c("Code_RecruitingPeriod","Code_Product", "Code_Audience"), columns = list(
+  
+  Cost = colDef(aggregate = "sum", format = colFormat(prefix = "$", separators = TRUE, digits = 2),filterable = FALSE),
+  Impressions = colDef(aggregate = "sum", format = colFormat(separators = TRUE),filterable = FALSE),
+  UPV = colDef(aggregate = "sum",filterable = FALSE),
+  ViewRate = colDef(aggregate = "mean", format = colFormat(percent = TRUE, digits = 1),filterable = FALSE),
+  VTR = colDef(aggregate = "mean", format = colFormat(percent = TRUE, digits = 1),filterable = FALSE),
+  BounceRatePct = colDef(aggregate = "mean",format = colFormat(percent = TRUE, digits = 0),filterable = FALSE)))
+```
+
+
+
+### YouTube Video
+
+```{r}
+data1 <- FMVM %>% 
+  filter(Code_Medium == "VID" & Code_Vendor == "YT" & Code_RecruitingPeriod %in% desiredRecruiting & Impressions >0 ) %>% 
+  group_by(Code_RecruitingPeriod, Code_Product, Code_Audience,Master_Date) %>% 
+  summarise(
+    Impressions = sum(Impressions),
+    Cost = sum(Cost),
+    ClickRatePct = Clicks/Impressions,
+    #VR = Views/Impressions,
+    UPV = sum(UPV),
+    BounceRatePct = Bounces/Sessions,
+    # OpenRate = LIOpens/Sends, 
+    # EngagementRate = Engagements/Impressions,
+    # BounceRatePct = Bounces/Sessions, 
+    # ResultsRate = Results/Impressions, 
+    ViewRate = round(Views/Impressions),
+    VTR = round(Completions/Views) 
+    )
+ reactable(data1, searchable = TRUE, filterable = TRUE, groupBy = c("Code_RecruitingPeriod","Code_Product", "Code_Audience"), columns = list(
+  
+  Cost = colDef(aggregate = "sum", format = colFormat(prefix = "$", separators = TRUE, digits = 2),filterable = FALSE),
+  Impressions = colDef(aggregate = "sum", format = colFormat(separators = TRUE),filterable = FALSE),
+  UPV = colDef(aggregate = "sum",filterable = FALSE),
+  ClickRatePct = colDef(aggregate = "mean", format = colFormat(percent = TRUE, digits = 2),filterable = FALSE),
+  ViewRate = colDef(aggregate = "mean", format = colFormat(percent = TRUE, digits = 1),filterable = FALSE),
+  VTR = colDef(aggregate = "mean", format = colFormat(percent = TRUE, digits = 1),filterable = FALSE),
+  BounceRatePct = colDef(aggregate = "mean",format = colFormat(percent = TRUE, digits = 0),filterable = FALSE)))
+```
